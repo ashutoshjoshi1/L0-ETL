@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Charts</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('#location-dropdown').change(function() {
+                var selectedLocation = $(this).val();
+                $('#device-dropdown').empty().append('<option value="">Choose a device</option>');
+                $('#file-dropdown').empty().append('<option value="">Choose a file</option>');
+                $('#file-url').val(''); // Clear the file URL field
+    
+                if (selectedLocation) {
+                    $.getJSON('/get-devices/', { location: selectedLocation }, function(devices) {
+                        if (devices.length > 0) {
+                            $.each(devices, function(index, device) {
+                                $('#device-dropdown').append($('<option></option>').attr('value', device).text(device));
+                            });
+                        } else {
+                            $('#device-dropdown').append('<option value="">No devices found</option>');
+                        }
+                    });
+                }
+            });
+    
+            $('#device-dropdown').change(function() {
+                var selectedLocation = $('#location-dropdown').val();
+                var selectedDevice = $(this).val();
+                $('#file-dropdown').empty().append('<option value="">Choose a file</option>');
+                $('#file-url').val(''); // Clear the file URL field
+    
+                if (selectedLocation && selectedDevice) {
+                    $.getJSON('/get-files/', { location: selectedLocation, device: selectedDevice }, function(files) {
+                        if (files.length > 0) {
+                            $.each(files, function(index, file) {
+                                $('#file-dropdown').append($('<option></option>').attr('value', file).text(file));
+                            });
+                        } else {
+                            $('#file-dropdown').append('<option value="">No files found</option>');
+                        }
+                    });
+                }
+            });
+    
+            $('#file-dropdown').change(function() {
+                var selectedLocation = $('#location-dropdown').val();
+                var selectedDevice = $('#device-dropdown').val();
+                var selectedFile = $(this).val();
+                if (selectedLocation && selectedDevice && selectedFile) {
+                    var finalUrl = `https://data.ovh.pandonia-global-network.org/${selectedLocation}/${selectedDevice}/L0/${selectedFile}`;
+                    $('#file-url').val(finalUrl); // Display the final URL
+                } else {
+                    $('#file-url').val(''); // Clear the file URL if not all selections are made
+                }
+            });
+            $('#process-button').click(processFile);
+
+            function processFile() {
+                var fileUrl = $('#file-url').val();  // Assumes you have the file URL in an input with ID 'file-url'
+                if (fileUrl) {
+                    window.open(`/download-process-file?file_url=${encodeURIComponent(fileUrl)}`, '_blank');
+                } else {
+                    alert("No file URL provided!");
+                }
+            }
+        });
+    </script>    
+</head>
+<body>
+    <div>
+        <h1>All Charts in One Place.</h1>
+    </div>
+    <div>
+        <label>Select Location:</label>
+        <select id="location-dropdown">
+            <option value="">Choose a location</option>
+            {% for location in locations %}
+            <option value="{{ location }}">{{ location }}</option>
+            {% endfor %}
+
+        </select>
+    </div>
+    <div>
+        <label>Select Device:</label>
+        <select id="device-dropdown">
+            <option value="">Choose a device</option>
+        </select>
+    </div>
+    <div>
+        <div>
+            <label>Select File:</label>
+            <select id="file-dropdown">
+                <option value="">Choose a file</option>
+            </select>
+        </div>
+    </div>
+    <div>
+        <label>File URL:</label>
+        <input type="text" id="file-url" readonly style="width: 100%;" />
+        <button id="process-button">Process File</button>
+    </div>
+    <div class="container">
+        <div class="box"><b>
+            <a href="{{ url_for('opaque') }}" class="content-link">
+            <h1>Opaque</h1>
+            <p>Click here to see the chart for Opaque Filter</p>
+            </a>
+        </b></div>
+        <div class="box"><b>
+            <a href="{{ url_for('open') }}" class="content-link">
+            <h1>Open</h1>
+            <p>Click here to see the chart for Open Filter</p>
+            </a>
+        </b></div>
+        <div class="box"><b>
+            <a href="{{ url_for('moon_open') }}" class="content-link">
+            <h1>Moon Open</h1>
+            <p>Click here to see the chart for Moon Open</p>
+            </a>
+        </b></div>
+        <div class="box"><b>
+            <a href="{{ url_for('sun_open') }}" class="content-link">
+            <h1>Sun Open</h1>
+            <p>Click here to see the chart for Sun Open</p>
+            </a>
+        </b></div>
+        <div class="box"><b>
+            <a href="{{ url_for('all_sensors') }}" class="content-link">
+            <h1>All Sensors</h1>
+            <p>Click here to see the chart for All Sensor Readings</p>
+            </a>
+        </b></div>
+    </div>
+    
+</body>
+</html>

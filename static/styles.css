@@ -1,0 +1,107 @@
+* {
+  margin: 0px;
+  padding: 0px;
+  box-sizing: border-box;  /* Corrected from 'boder-box' */
+  font-family: "Poppins", serif;
+  align-items: center; /* This generally doesn't have an effect here */
+}
+
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: #1d031f;
+}
+
+.container {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 50px;
+  gap: 50px;
+}
+
+.container .box {
+  position: relative;
+  height: 400px;
+  width: 280px;
+  background: #fff;
+  border-radius: 20px;
+}
+
+.container .box::before,
+.container .box::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  filter: blur(16px);
+}
+
+.container .box::before {
+  filter: none;
+}
+
+.container .box:nth-child(1)::before,
+.container .box:nth-child(1)::after {
+  background: linear-gradient(45deg, #ffbc00, #ff0058);
+}
+
+.container .box:nth-child(2)::before,
+.container .box:nth-child(2)::after {
+  background: linear-gradient(45deg, #03a9f4, #ff0058);
+}
+
+.container .box:nth-child(3)::before,
+.container .box:nth-child(3)::after {
+  background: linear-gradient(45deg, #4dff03, #00d0ff);
+}
+
+.container .box:nth-child(4)::before,
+.container .box:nth-child(4)::after {
+  background: linear-gradient(45deg, #f05f57, #360940);  /* Example gradient for the fourth box */
+}
+
+.container .box:nth-child(5)::before,
+.container .box:nth-child(5)::after {
+  background: linear-gradient(45deg, #03a9f4, #ff0058);  /* Example gradient for the fifth box */
+}
+
+
+
+.container .box b {
+  padding: 30px;
+  position: absolute;
+  display: block;
+  inset: 4px;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.75);
+  z-index: 2;
+}
+
+.container .box b p {
+  font-weight: 200;
+  color: #fff;
+  text-shadow: 0 0 15px #fff;
+}
+
+h1 {
+  font-size: 2.5em; /* Large font size for h1 */
+  color: #fff; /* White color font */
+  text-align: center; /* Center alignment */
+  width: 100%; /* Full width to ensure centering */
+  margin-top: 20px; /* Optional: space from the top */
+  margin-bottom: 30px;
+}
+
+label {
+  font-size: 1.5em; /* Large font size for h1 */
+  color: #fff; /* White color font */
+  text-align: center; /* Center alignment */
+  width: 100%; /* Full width to ensure centering */
+  margin-top: 20px; /* Optional: space from the top */
+  margin-bottom: 30px;
+}
