@@ -11,11 +11,10 @@ import matplotlib.pyplot as plt
 
 app = Flask(__name__)
 
-df = None
+df = pd.DataFrame()
 
 def process_txt_file(file_content):
     """Process text data content and return a DataFrame."""
-    global df
     lines = file_content.split('\n')
     data = []
     section = 0
@@ -54,7 +53,9 @@ def process_txt_file(file_content):
     column_names = base_columns + pixel_columns
 
     # Convert to DataFrame
+    global df
     df = pd.DataFrame(data, columns=column_names)
+    df["Timestamp"] = pd.to_datetime(df["Timestamp"], errors="coerce")
 
     return df
 
@@ -153,13 +154,12 @@ def download_process_file():
             else:
                 file_content = response.content.decode('utf-8', errors='replace')
 
-            # Process the file content and return a DataFrame
+            # Assume file_content is now a properly decoded string, if not, adjust accordingly
             result_df = process_txt_file(file_content)
             if not result_df.empty:
-                # Here, instead of saving to a CSV, you can use the DataFrame directly
-                # For example, storing it in session or passing it to a template
-                # session['result_df'] = result_df.to_json()  # Storing DataFrame in session as JSON
-                return render_template("display_data.html", table=result_df.to_html())
+                result_path = "/tmp/result.csv"
+                result_df.to_csv(result_path, index=False)
+                return send_file(result_path, as_attachment=True)
             else:
                 return jsonify({"error": "Processed data is empty"}), 404
         else:
@@ -167,36 +167,54 @@ def download_process_file():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
 @app.route('/opaque')
 def opaque():
-    # Assuming 'data' is a globally accessible DataFrame or fetched/defined within this function
-    # For example, you might load it here from a CSV or other data source:
-    global df
+    file_url = request.args.get('file_url')
+    if not file_url:
+        return jsonify({"error": "No file URL provided"}), 400
 
-    df1 = df[df['Filterwheel 2'].isin([3, 6])]
-    average_values = df1.iloc[:, 3:].mean()
+    try:
+        # Fetch the file content from the URL
+        response = requests.get(file_url)
+        if response.status_code == 200:
+            file_content = response.content
+            if file_url.endswith('.bz2'):
+                file_content = decompress_bz2_file(file_content)
+                if file_content is None:
+                    return jsonify({"error": "Failed to decompress data"}), 500
+            
+            # Process the file content using the custom function
+            df = process_txt_file(file_content)
 
-    x = average_values.tolist()[24:]  # Assuming 'average_values' has the correct column slice
-    x_values = range(len(x))
+            # Ensure the DataFrame contains the necessary columns
+            if 'Filterwheel 2' not in df or 'Routine Code' not in df:
+                return jsonify({'error': 'Required columns are missing in the data'}), 400
+            
+            # Filtering data based on 'Filterwheel 2'
+            df_filtered = df[df['Filterwheel 2'].isin([3, 6])]
+            if df_filtered.empty:
+                return jsonify({'error': 'No data found for specified filter criteria'}), 404
+            
+            # Plotting
+            plt.figure(figsize=(10, 5))
+            plt.plot(df_filtered['Routine Code'], df_filtered['Other Data'], marker='o')
+            plt.title('Opaque Filter Values')
+            plt.xlabel('Routine Code')
+            plt.ylabel('Values')
+            plt.grid(True)
 
-    print("Routine Code is: ", df1['Routine Code'].unique())  # This will print to console, not to the user
+            # Save the plot to a bytes buffer
+            buf = io.BytesIO()
+            plt.savefig(buf, format='png')
+            buf.seek(0)
+            plt.close()
 
-    # Create a plot
-    plt.figure(figsize=(21, 9))
-    plt.plot(x_values, x)
-    plt.title(f'Pixel Values for Opaque')
-    plt.xlabel('Pixel Number')
-    plt.ylabel('Pixel Value')
-    plt.grid(True)
+            return send_file(buf, mimetype='image/png')
+        else:
+            return jsonify({"error": "Failed to download file"}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-    # Save the plot to a bytes buffer
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png')
-    buf.seek(0)
-    plt.close()
-
-    return send_file(buf, mimetype='image/png')
 @app.route('/open')
 def open():
     # Implement the function for the Open chart
@@ -216,6 +234,11 @@ def sun_open():
 def all_sensors():
     # Implement the function for viewing all sensors
     return redirect(url_for('home'))  # Example: redirect back to home
+
+@app.route('/')
+def home():
+    return render_template('display_plot.html')
+
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
