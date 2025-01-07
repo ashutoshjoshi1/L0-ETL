@@ -7,6 +7,8 @@ import pandas as pd
 from datetime import datetime
 import os
 import io
+import matplotlib
+matplotlib.use('agg')
 import matplotlib.pyplot as plt
 
 app = Flask(__name__)
@@ -37,6 +39,8 @@ def process_txt_file(file_content):
     else:
         return pd.DataFrame()  # Return empty DataFrame if data is empty
 
+    # Define the maximum columns to process
+    max_columns = 2076
     base_columns = [
         "Routine Code", "Timestamp", "Routine Count", "Repetition Count",
         "Duration", "Integration Time [ms]", "Number of Cycles", "Saturation Index",
@@ -46,7 +50,7 @@ def process_txt_file(file_content):
         "Head Sensor Humidity [%]", "Head Sensor Pressure [hPa]", "Scale Factor", "Uncertainty Indicator"
     ]
     num_base_columns = len(base_columns)
-    num_pixel_columns = num_columns - num_base_columns
+    num_pixel_columns = min(num_columns, max_columns) - num_base_columns
 
     # Generate pixel column names based on the excess number of columns
     pixel_columns = [f"Pixel_{i+1}" for i in range(num_pixel_columns)]
@@ -54,7 +58,7 @@ def process_txt_file(file_content):
 
     # Convert to DataFrame
     global df
-    df = pd.DataFrame(data, columns=column_names)
+    df = pd.DataFrame([row[:max_columns] for row in data], columns=column_names[:max_columns])
     df["Timestamp"] = pd.to_datetime(df["Timestamp"], errors="coerce")
 
     return df
@@ -174,7 +178,6 @@ def opaque():
         return jsonify({"error": "No file URL provided"}), 400
 
     try:
-        # Fetch the file content from the URL
         response = requests.get(file_url)
         if response.status_code == 200:
             file_content = response.content
@@ -182,28 +185,37 @@ def opaque():
                 file_content = decompress_bz2_file(file_content)
                 if file_content is None:
                     return jsonify({"error": "Failed to decompress data"}), 500
-            
-            # Process the file content using the custom function
+
             df = process_txt_file(file_content)
+            df1 = df.iloc[:, 2:2030]
 
-            # Ensure the DataFrame contains the necessary columns
-            if 'Filterwheel 2' not in df or 'Routine Code' not in df:
-                return jsonify({'error': 'Required columns are missing in the data'}), 400
-            
-            # Filtering data based on 'Filterwheel 2'
-            df_filtered = df[df['Filterwheel 2'].isin([3, 6])]
-            if df_filtered.empty:
-                return jsonify({'error': 'No data found for specified filter criteria'}), 404
-            
-            # Plotting
-            plt.figure(figsize=(10, 5))
-            plt.plot(df_filtered['Routine Code'], df_filtered['Other Data'], marker='o')
-            plt.title('Opaque Filter Values')
-            plt.xlabel('Routine Code')
-            plt.ylabel('Values')
-            plt.grid(True)
+            # Convert all object columns to int
+            df1 = df1.apply(lambda col: pd.to_numeric(col, errors='coerce') if col.dtypes == 'object' else col)
 
-            # Save the plot to a bytes buffer
+            # Optional: Replace NaN values (if any) after conversion with a default value, e.g., 0
+            df1 = df1.fillna(0).astype(int)
+            df1 = df1[df1['Filterwheel 2'].isin([3, 6])]
+
+            # Ensure selected DataFrame has numeric data
+            # df1.apply(pd.to_numeric)
+            df1 = df1.iloc[:, 22:2030]
+
+
+            # Calculate mean across rows (axis=0)
+            y = df1.mean(axis=0).tolist()
+            print(len(y))
+            print(y)
+            # Create x-axis values
+            x = range(len(y))
+
+            # Plotting logic
+            plt.figure(figsize=(30, 15))
+            plt.plot(x, y)
+            plt.title('Pixel Values for Opaque')
+            plt.xlabel('Pixel Number')
+            plt.ylabel('Average Pixel Value')
+            # plt.grid(True)
+
             buf = io.BytesIO()
             plt.savefig(buf, format='png')
             buf.seek(0)
@@ -217,23 +229,250 @@ def opaque():
 
 @app.route('/open')
 def open():
-    # Implement the function for the Open chart
-    return redirect(url_for('home'))  # Example: redirect back to home
+    file_url = request.args.get('file_url')
+    if not file_url:
+        return jsonify({"error": "No file URL provided"}), 400
+
+    try:
+        response = requests.get(file_url)
+        if response.status_code == 200:
+            file_content = response.content
+            if file_url.endswith('.bz2'):
+                file_content = decompress_bz2_file(file_content)
+                if file_content is None:
+                    return jsonify({"error": "Failed to decompress data"}), 500
+
+            df = process_txt_file(file_content)
+            df1 = df.iloc[:, 2:2030]
+
+            # Convert all object columns to int
+            df1 = df1.apply(lambda col: pd.to_numeric(col, errors='coerce') if col.dtypes == 'object' else col)
+
+            # Optional: Replace NaN values (if any) after conversion with a default value, e.g., 0
+            df1 = df1.fillna(0).astype(int)
+            df1 = df1[df1['Filterwheel 1'].isin([1, 2, 4])]
+            df1 = df1[df1['Filterwheel 2'].isin([1, 4])]
+
+            # Ensure selected DataFrame has numeric data
+            # df1.apply(pd.to_numeric)
+            df1 = df1.iloc[:, 22:2030]
+
+
+            # Calculate mean across rows (axis=0)
+            y = df1.mean(axis=0).tolist()
+            print(len(y))
+            print(y)
+            # Create x-axis values
+            x = range(len(y))
+
+            # Plotting logic
+            plt.figure(figsize=(30, 15))
+            plt.plot(x, y)
+            plt.title('Pixel Values for Open')
+            plt.xlabel('Pixel Number')
+            plt.ylabel('Average Pixel Value')
+            # plt.grid(True)
+
+            buf = io.BytesIO()
+            plt.savefig(buf, format='png')
+            buf.seek(0)
+            plt.close()
+
+            return send_file(buf, mimetype='image/png')
+        else:
+            return jsonify({"error": "Failed to download file"}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/moon_open')
 def moon_open():
-    # Implement the function for the Moon Open chart
-    return redirect(url_for('home'))  # Example: redirect back to home
+    file_url = request.args.get('file_url')
+    if not file_url:
+        return jsonify({"error": "No file URL provided"}), 400
+
+    try:
+        response = requests.get(file_url)
+        if response.status_code == 200:
+            file_content = response.content
+            if file_url.endswith('.bz2'):
+                file_content = decompress_bz2_file(file_content)
+                if file_content is None:
+                    return jsonify({"error": "Failed to decompress data"}), 500
+
+
+            df = process_txt_file(file_content)
+            df1 = df[df['Routine Code'] == 'MO']
+            routine_dict = {
+                key: df[df['Routine Code'] == key].iloc[:, 24:]
+                for key in df['Routine Code'].dropna().unique()
+            }
+            print(routine_dict)
+
+            
+
+            # Convert all object columns to int
+            df1 = df1.apply(lambda col: pd.to_numeric(col, errors='coerce') if col.dtypes == 'object' else col)
+
+            # Optional: Replace NaN values (if any) after conversion with a default value, e.g., 0
+            df1 = df1.fillna(0).astype(int)
+
+            # Ensure selected DataFrame has numeric data
+            # df1.apply(pd.to_numeric)
+            df1 = df1.iloc[:, 22:2030]
+
+            # Calculate mean across rows (axis=0)
+            y = df1.mean(axis=0).tolist()
+            print(len(y))
+            print(y)
+            # Create x-axis values
+            x = range(len(y))
+
+            # Plotting logic
+            plt.figure(figsize=(30, 15))
+            plt.plot(x, y)
+            plt.title('Pixel Values for Moon Open')
+            plt.xlabel('Pixel Number')
+            plt.ylabel('Average Pixel Value')
+            # plt.grid(True)
+
+            buf = io.BytesIO()
+            plt.savefig(buf, format='png')
+            buf.seek(0)
+            plt.close()
+
+            return send_file(buf, mimetype='image/png')
+        else:
+            return jsonify({"error": "Failed to download file"}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/sun_open')
 def sun_open():
-    # Implement the function for the Sun Open chart
-    return redirect(url_for('home'))  # Example: redirect back to home
+    file_url = request.args.get('file_url')
+    if not file_url:
+        return jsonify({"error": "No file URL provided"}), 400
+
+    try:
+        response = requests.get(file_url)
+        if response.status_code == 200:
+            file_content = response.content
+            if file_url.endswith('.bz2'):
+                file_content = decompress_bz2_file(file_content)
+                if file_content is None:
+                    return jsonify({"error": "Failed to decompress data"}), 500
+
+            df = process_txt_file(file_content)
+            df1 = df[df['Routine Code'].isin(['SQ','SO','SS'])]
+            # routine_dict = {
+            #     key: df[df['Routine Code'] == key].iloc[:, 24:]
+            #     for key in df['Routine Code'].dropna().unique()
+            # }
+            # print(routine_dict)
+
+            
+
+            # Convert all object columns to int
+            df1 = df1.apply(lambda col: pd.to_numeric(col, errors='coerce') if col.dtypes == 'object' else col)
+
+            # Optional: Replace NaN values (if any) after conversion with a default value, e.g., 0
+            df1 = df1.fillna(0).astype(int)
+
+            # Ensure selected DataFrame has numeric data
+            # df1.apply(pd.to_numeric)
+            df1 = df1.iloc[:, 22:2030]
+
+
+            # Calculate mean across rows (axis=0)
+            y = df1.mean(axis=0).tolist()
+            print(len(y))
+            print(y)
+            # Create x-axis values
+            x = range(len(y))
+
+            # Plotting logic
+            plt.figure(figsize=(30, 15))
+            plt.plot(x, y)
+            plt.title('Pixel Values for Sun Open')
+            plt.xlabel('Pixel Number')
+            plt.ylabel('Average Pixel Value')
+            # plt.grid(True)
+
+            buf = io.BytesIO()
+            plt.savefig(buf, format='png')
+            buf.seek(0)
+            plt.close()
+
+            return send_file(buf, mimetype='image/png')
+        else:
+            return jsonify({"error": "Failed to download file"}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/all_sensors')
 def all_sensors():
-    # Implement the function for viewing all sensors
-    return redirect(url_for('home'))  # Example: redirect back to home
+    file_url = request.args.get('file_url')
+    if not file_url:
+        return jsonify({"error": "No file URL provided"}), 400
+
+    try:
+        response = requests.get(file_url)
+        if response.status_code == 200:
+            file_content = response.content
+            if file_url.endswith('.bz2'):
+                file_content = decompress_bz2_file(file_content)
+                if file_content is None:
+                    return jsonify({"error": "Failed to decompress data"}), 500
+
+            df = process_txt_file(file_content)
+            df1 = df.iloc[:, 1:2030]
+
+            # Convert all object columns to int
+            df1 = df1.apply(lambda col: pd.to_numeric(col, errors='coerce') if col.dtypes == 'object' else col)
+
+            # Optional: Replace NaN values (if any) after conversion with a default value, e.g., 0
+            df1 = df1.fillna(0).astype(int)
+            df1['Head Sensor Pressure [hPa]'] = df1['Head Sensor Pressure [hPa]'] * 0.01
+
+            # Plotting logic
+            plt.figure(figsize=(30, 15))
+
+            # Electronics Temperature
+            plt.plot(df1['Timestamp'], df1['Electronics Temp [°C]'], label='Electronics Temp [°C]')
+
+            # Control Temperature
+            plt.plot(df1['Timestamp'], df1['Control Temp [°C]'], label='Control Temp [°C]')
+
+            # Auxiliary Temperature
+            plt.plot(df1['Timestamp'], df1['Aux Temp [°C]'], label='Aux Temp [°C]')
+
+            # Head Sensor Temperature
+            plt.plot(df1['Timestamp'], df1['Head Sensor Temp [°C]'], label='Head Sensor Temp [°C]')
+
+            # Head Sensor Humidity
+            plt.plot(df1['Timestamp'], df1['Head Sensor Humidity [%]'], label='Head Sensor Humidity [%]')
+
+            # Head Sensor Pressure
+            plt.plot(df1['Timestamp'], df1['Head Sensor Pressure [hPa]'], label='Head Sensor Pressure [hPa]')
+
+            plt.gca().xaxis.set_major_locator(plt.MaxNLocator(40))
+            plt.xlabel('Timestamp')
+            plt.ylabel('Measured Values')
+            plt.title('Sensor Readings Over Time')
+            plt.xticks(rotation=45)
+            plt.legend()
+            plt.show()
+            # plt.grid(True)
+
+            buf = io.BytesIO()
+            plt.savefig(buf, format='png')
+            buf.seek(0)
+            plt.close()
+
+            return send_file(buf, mimetype='image/png')
+        else:
+            return jsonify({"error": "Failed to download file"}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/')
 def home():

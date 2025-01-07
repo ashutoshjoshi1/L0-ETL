@@ -68,7 +68,66 @@
                 }
             }
         });
-    </script>    
+    </script>
+   <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const links = {
+            opaque: document.querySelector('a[href="{{ url_for("opaque") }}"]'),
+            open: document.querySelector('a[href="{{ url_for("open") }}"]'),
+            moonOpen: document.querySelector('a[href="{{ url_for("moon_open") }}"]'),
+            sunOpen: document.querySelector('a[href="{{ url_for("sun_open") }}"]'),
+            allSensors: document.querySelector('a[href="{{ url_for("all_sensors") }}"]')
+        };
+
+        // Generic function to handle click events
+        function handleClick(event, endpoint) {
+            event.preventDefault();
+            const fileUrl = document.getElementById('file-url').value;
+
+            if (!fileUrl) {
+                alert('Please select a file URL before proceeding!');
+                return;
+            }
+
+            // Open the endpoint with the selected file URL
+            const chartUrl = `/${endpoint}?file_url=${encodeURIComponent(fileUrl)}`;
+            window.open(chartUrl, '_blank');
+        }
+
+        // Attach event listeners for each link
+        if (links.opaque) {
+            links.opaque.addEventListener('click', function (event) {
+                handleClick(event, 'opaque');
+            });
+        }
+
+        if (links.open) {
+            links.open.addEventListener('click', function (event) {
+                handleClick(event, 'open');
+            });
+        }
+
+        if (links.moonOpen) {
+            links.moonOpen.addEventListener('click', function (event) {
+                handleClick(event, 'moon_open');
+            });
+        }
+
+        if (links.sunOpen) {
+            links.sunOpen.addEventListener('click', function (event) {
+                handleClick(event, 'sun_open');
+            });
+        }
+
+        if (links.allSensors) {
+            links.allSensors.addEventListener('click', function (event) {
+                handleClick(event, 'all_sensors');
+            });
+        }
+    });
+</script>
+
+        
 </head>
 <body>
     <div>
