@@ -60,7 +60,7 @@ def process_txt_file(file_content):
     # Convert to DataFrame
     global df
     df = pd.DataFrame([row[:max_columns] for row in data], columns=column_names[:max_columns])
-    df["Timestamp"] = pd.to_datetime(df["Timestamp"], errors="coerce")
+    df["Timestamp"] = pd.to_datetime(df["Timestamp"], errors="coerce",infer_datetime_format=True)
 
     return df
 
