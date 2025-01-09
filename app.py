@@ -3,7 +3,6 @@ import requests
 from bs4 import BeautifulSoup
 import logging
 import bz2
-import numpy
 import pandas as pd
 from datetime import datetime
 import os
@@ -32,9 +31,7 @@ def process_txt_file(file_content):
             data.append(line.split())
 
     if not data:
-        return pd.DataFrame()  # Return an empty DataFrame if no data was found
-
-    # Attempt to infer the number of columns based on the length of the first data entry
+        return pd.DataFrame()
     if data:
         num_columns = len(data[0])
     else:
@@ -60,7 +57,7 @@ def process_txt_file(file_content):
     # Convert to DataFrame
     global df
     df = pd.DataFrame([row[:max_columns] for row in data], columns=column_names[:max_columns])
-    df["Timestamp"] = pd.to_datetime(df["Timestamp"], errors="coerce",infer_datetime_format=True)
+    df["Timestamp"] = pd.to_datetime(df["Timestamp"], errors="coerce")
 
     return df
 
@@ -370,7 +367,6 @@ def sun_open():
             # }
             # print(routine_dict)
 
-            
 
             # Convert all object columns to int
             df1 = df1.apply(lambda col: pd.to_numeric(col, errors='coerce') if col.dtypes == 'object' else col)
