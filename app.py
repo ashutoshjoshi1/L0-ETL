@@ -300,11 +300,11 @@ def moon_open():
 
             df = process_txt_file(file_content)
             df1 = df[df['Routine Code'] == 'MO']
-            routine_dict = {
-                key: df[df['Routine Code'] == key].iloc[:, 24:]
-                for key in df['Routine Code'].dropna().unique()
-            }
-            print(routine_dict)
+            # routine_dict = {
+            #     key: df[df['Routine Code'] == key].iloc[:, 24:]
+            #     for key in df['Routine Code'].dropna().unique()
+            # }
+            # print(routine_dict)
 
             
 
@@ -316,10 +316,10 @@ def moon_open():
 
             # Ensure selected DataFrame has numeric data
             # df1.apply(pd.to_numeric)
-            df1 = df1.iloc[:, 22:2030]
+            df1 = df1.iloc[:, 999:2030]
 
             # Calculate mean across rows (axis=0)
-            y = df1.mean(axis=0).tolist()
+            y = df1.mean(axis=1).tolist()
             print(len(y))
             print(y)
             # Create x-axis values
@@ -327,7 +327,7 @@ def moon_open():
 
             # Plotting logic
             plt.figure(figsize=(30, 15))
-            plt.plot(x, y)
+            plt.scatter(x, y)
             plt.title('Pixel Values for Moon Open')
             plt.xlabel('Pixel Number')
             plt.ylabel('Average Pixel Value')
@@ -360,7 +360,7 @@ def sun_open():
                     return jsonify({"error": "Failed to decompress data"}), 500
 
             df = process_txt_file(file_content)
-            df1 = df[df['Routine Code'].isin(['SQ','SO','SS'])]
+            df1 = df[df['Routine Code'].isin(['SQ','SS'])]
             # routine_dict = {
             #     key: df[df['Routine Code'] == key].iloc[:, 24:]
             #     for key in df['Routine Code'].dropna().unique()
@@ -373,22 +373,23 @@ def sun_open():
 
             # Optional: Replace NaN values (if any) after conversion with a default value, e.g., 0
             df1 = df1.fillna(0).astype(int)
-
+            timest = df1.iloc[:,1]
             # Ensure selected DataFrame has numeric data
             # df1.apply(pd.to_numeric)
-            df1 = df1.iloc[:, 22:2030]
+            df1 = df1.iloc[:, 999:2030]
 
 
             # Calculate mean across rows (axis=0)
-            y = df1.mean(axis=0).tolist()
+            y = df1.mean(axis=1).tolist()
             print(len(y))
             print(y)
             # Create x-axis values
-            x = range(len(y))
+            # x = range(len(y))
+
 
             # Plotting logic
             plt.figure(figsize=(30, 15))
-            plt.plot(x, y)
+            plt.scatter(timest, y)
             plt.title('Pixel Values for Sun Open')
             plt.xlabel('Pixel Number')
             plt.ylabel('Average Pixel Value')
