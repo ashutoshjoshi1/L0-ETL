@@ -16,7 +16,6 @@ app = Flask(__name__)
 df = pd.DataFrame()
 
 def process_txt_file(file_content):
-    """Process text data content and return a DataFrame."""
     lines = file_content.split('\n')
     data = []
     section = 0
@@ -35,9 +34,7 @@ def process_txt_file(file_content):
     if data:
         num_columns = len(data[0])
     else:
-        return pd.DataFrame()  # Return empty DataFrame if data is empty
-
-    # Define the maximum columns to process
+        return pd.DataFrame()
     max_columns = 2076
     base_columns = [
         "Routine Code", "Timestamp", "Routine Count", "Repetition Count",
@@ -50,7 +47,7 @@ def process_txt_file(file_content):
     num_base_columns = len(base_columns)
     num_pixel_columns = min(num_columns, max_columns) - num_base_columns
 
-    # Generate pixel column names based on the excess number of columns
+
     pixel_columns = [f"Pixel_{i+1}" for i in range(num_pixel_columns)]
     column_names = base_columns + pixel_columns
 
@@ -297,25 +294,15 @@ def moon_open():
                 if file_content is None:
                     return jsonify({"error": "Failed to decompress data"}), 500
 
-
             df = process_txt_file(file_content)
             df1 = df[df['Routine Code'] == 'MO']
-            # routine_dict = {
-            #     key: df[df['Routine Code'] == key].iloc[:, 24:]
-            #     for key in df['Routine Code'].dropna().unique()
-            # }
-            # print(routine_dict)
-
             
-
             # Convert all object columns to int
             df1 = df1.apply(lambda col: pd.to_numeric(col, errors='coerce') if col.dtypes == 'object' else col)
 
             # Optional: Replace NaN values (if any) after conversion with a default value, e.g., 0
             df1 = df1.fillna(0).astype(int)
 
-            # Ensure selected DataFrame has numeric data
-            # df1.apply(pd.to_numeric)
             df1 = df1.iloc[:, 999:2030]
 
             # Calculate mean across rows (axis=0)
