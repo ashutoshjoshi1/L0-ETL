@@ -348,12 +348,6 @@ def sun_open():
 
             df = process_txt_file(file_content)
             df1 = df[df['Routine Code'].isin(['SQ','SS'])]
-            # routine_dict = {
-            #     key: df[df['Routine Code'] == key].iloc[:, 24:]
-            #     for key in df['Routine Code'].dropna().unique()
-            # }
-            # print(routine_dict)
-
 
             # Convert all object columns to int
             df1 = df1.apply(lambda col: pd.to_numeric(col, errors='coerce') if col.dtypes == 'object' else col)
